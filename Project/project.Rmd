@@ -1,8 +1,8 @@
 ---
-title: "Practical Machine Learning Project"
-date: "April - 2015"
+title: Practical Machine Learning Project
+date: "`r creationdate <- format(Sys.time(), '%B, %d %Y'); creationdate`"
+output: html_document
 ---
-
 
 # Weight lifting exercises Data Analysis Report
 
@@ -22,12 +22,14 @@ Our objective is to predict the manner in which they did the exercise.
 More information is available from the website here: http://groupware.les.inf.puc-rio.br/har
 (see the section on the Weight Lifting Exercise Dataset). 
 
+
 ## Data
 The training data for this project are available here: 
 https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
 
 The test data are available here: 
 https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
 
 ## Basic Settings
 We will load all the libraries to be used along this report.
@@ -38,6 +40,7 @@ library(rpart)
 library(rpart.plot)
 library(corrplot)
 ```
+
 
 ## Reading the Data
 The data set files (train and test) to be used in our analysis will be downloaded from the above mentioned location. It will only happen on the first execution.
@@ -70,7 +73,6 @@ The original training data set contains **`r dim(original_train_data)[1]`** rows
 
 
 ## Pre-processing the Data
-
 We will clean the data sets removing the observations and variables not required in our analysis, as well as
 the missing values where imputing is not an option.
 ```{r step_removena, cache=TRUE}
@@ -97,7 +99,6 @@ names(train_data)
 ```
 
 ## Data Modelling
-
 We will do a 70:30 split on the training set for a training (70%) and validation data set (30%), then use the validation data set for a **10-fold cross-validation**.
 
 ```{r step_partition, cache=TRUE}
