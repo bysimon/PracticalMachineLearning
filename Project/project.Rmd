@@ -1,9 +1,12 @@
 ---
-title: "Practical Machine Learning Project: Weight lifting exercises Data Analysis Report"
-author: "Simone"
-
+title: "Practical Machine Learning Project"
+date: "April - 2015"
 ---
-# Introduction 
+
+
+# Weight lifting exercises Data Analysis Report
+
+## Introduction 
 Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of 
 data about personal activity relatively inexpensively. These type of devices are part of the quantified 
 self movement - a group of enthusiasts who take measurements about themselves regularly to
@@ -34,13 +37,11 @@ library(randomForest)
 library(rpart)
 library(rpart.plot)
 library(corrplot)
-
 ```
 
 ## Reading the Data
 The data set files (train and test) to be used in our analysis will be downloaded from the above mentioned location. It will only happen on the first execution.
 ```{r step_readdata, cache=TRUE}
-#setwd("D:/Coursera/Johns Hopkins University/08.Practical Machine Learning/Project")
 train_file <- "./data/pml-training.csv"
 test_file  <-"./data/pml-testing.csv"
 
@@ -63,9 +64,6 @@ dim(original_train_data)
 # reading the test data file
 original_test_data  <- read.csv(test_file, na.strings=c("", "NA"))
 dim(original_test_data)
-
-##The training data set contains `r dim(train_data)[1]` rows (or observations) and `r dim(train_data[2]` columns (or variables).
-
 ```
 The original training data set contains **`r dim(original_train_data)[1]`** rows (or observations) and 
 **`r dim(original_train_data)[2]`** columns (or variables).
@@ -79,22 +77,21 @@ the missing values where imputing is not an option.
 train_data <- original_train_data[, colSums(is.na(original_train_data)) == 0] 
 test_data  <- original_test_data[, colSums(is.na(original_test_data)) == 0] 
 
-#nullifying the columns to be removed
+# nullifying the columns to be removed
 colnames_to_remove <- c("X", "user_name", "raw_timestamp_part_1",
                     "raw_timestamp_part_2", "cvtd_timestamp", "num_window")
 for (col in colnames_to_remove) {
     train_data[, col] <- NULL
 }
 
-#remove the nullified columns and the ones with unique value (zero variance predictors)
+# remove the nullified columns and the ones with unique value (zero variance predictors)
 nzv <- nearZeroVar(train_data)
 train_data <- train_data[-nzv]
 test_data  <- test_data[-nzv]
-
 ```
 
 
-The final structure set as per below.
+The final structure set is as per below.
 ```{r step_colstraindata}
 names(train_data)
 ```
@@ -103,21 +100,15 @@ names(train_data)
 
 We will do a 70:30 split on the training set for a training (70%) and validation data set (30%), then use the validation data set for a **10-fold cross-validation**.
 
-Then, we will use the *Random Forest* classifier to predict the action class. 
-The accuracy of the model is to be measured using the *10-fold cross validation*.
-
 ```{r step_partition, cache=TRUE}
 set.seed(224)
+# slicing/partitioning the data set
 inTrain <- createDataPartition(train_data$classe, p=0.70, list=F)
 newtrain_data <- train_data[inTrain, ]
 newtest_data <- train_data[-inTrain, ]
 ```
-
-The final structure set as per below.
-```{r step_colstraindata2}
-names(newtrain_data)
-names(newtest_data)
-```
+We will then use the *Random Forest* classifier to predict the action class. 
+The accuracy of the model is to be measured using the *10-fold cross validation*.
 
 ```{r step_modelrf, cache=TRUE}
 control_rf <- trainControl(method="cv", 10)
@@ -139,15 +130,17 @@ mod_accuracy
 
 out_sample_error <- 1 - as.numeric(conf_matrix$overall[1])
 out_sample_error
-#So, the estimated accuracy of the model is `r mod_accuracy` an the estimated out-of-sample error is `r out_sample_error`.
-
 ```
+
+So, the estimated *accuracy* of the model is `r mod_accuracy[1] * 100`% and the estimated *out-of-sample error* is `r out_sample_error`.
 
 The proposed model seems classifying well enough. 
 
 
-## Decision Tree Visualization
-```{r step_treemodel, cache=TRUE}
+## Decision Tree Graph
+We can see the Decision Tree as per below:
+
+```{r step_treemodel, cache=TRUE, fig.height=9}
 tree_model <- rpart(classe ~ ., data=newtrain_data, method="class")
 prp(tree_model)
 
