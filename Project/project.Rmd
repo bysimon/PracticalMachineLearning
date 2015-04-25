@@ -1,0 +1,154 @@
+---
+title: "Practical Machine Learning Project: Weight lifting exercises Data Analysis Report"
+author: "Simone"
+
+---
+# Introduction 
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of 
+data about personal activity relatively inexpensively. These type of devices are part of the quantified 
+self movement - a group of enthusiasts who take measurements about themselves regularly to
+improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that 
+people regularly do is quantify how much of a particular activity they do, but they rarely quantify how 
+well they do it. 
+
+In this project, we use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants.
+They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. 
+
+Our objective is to predict the manner in which they did the exercise.
+
+More information is available from the website here: http://groupware.les.inf.puc-rio.br/har
+(see the section on the Weight Lifting Exercise Dataset). 
+
+## Data
+The training data for this project are available here: 
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: 
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+## Basic Settings
+We will load all the libraries to be used along this report.
+```{r step_loadlibrary, results='hide'}
+library(caret)
+library(randomForest)
+library(rpart)
+library(rpart.plot)
+library(corrplot)
+
+```
+
+## Reading the Data
+The data set files (train and test) to be used in our analysis will be downloaded from the above mentioned location. It will only happen on the first execution.
+```{r step_readdata, cache=TRUE}
+#setwd("D:/Coursera/Johns Hopkins University/08.Practical Machine Learning/Project")
+train_file <- "./data/pml-training.csv"
+test_file  <-"./data/pml-testing.csv"
+
+# only download if required
+if(file.exists( train_file ) == 0)
+{
+    train_url <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+    download.file(fileUrl , destfile=train_url , method="curl")
+}
+if(file.exists( test_file ) == 0)
+{
+    test_url <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+    download.file(fileUrl , destfile=test_url , method="curl")
+}
+
+# reading the train data file
+original_train_data <- read.csv(train_file, na.strings=c("", "NA"))
+dim(original_train_data)
+
+# reading the test data file
+original_test_data  <- read.csv(test_file, na.strings=c("", "NA"))
+dim(original_test_data)
+
+##The training data set contains `r dim(train_data)[1]` rows (or observations) and `r dim(train_data[2]` columns (or variables).
+
+```
+The original training data set contains **`r dim(original_train_data)[1]`** rows (or observations) and 
+**`r dim(original_train_data)[2]`** columns (or variables).
+
+
+## Pre-processing the Data
+
+We will clean the data sets removing the observations and variables not required in our analysis, as well as
+the missing values where imputing is not an option.
+```{r step_removena, cache=TRUE}
+train_data <- original_train_data[, colSums(is.na(original_train_data)) == 0] 
+test_data  <- original_test_data[, colSums(is.na(original_test_data)) == 0] 
+
+#nullifying the columns to be removed
+colnames_to_remove <- c("X", "user_name", "raw_timestamp_part_1",
+                    "raw_timestamp_part_2", "cvtd_timestamp", "num_window")
+for (col in colnames_to_remove) {
+    train_data[, col] <- NULL
+}
+
+#remove the nullified columns and the ones with unique value (zero variance predictors)
+nzv <- nearZeroVar(train_data)
+train_data <- train_data[-nzv]
+test_data  <- test_data[-nzv]
+
+```
+
+
+The final structure set as per below.
+```{r step_colstraindata}
+names(train_data)
+```
+
+## Data Modelling
+
+We will do a 70:30 split on the training set for a training (70%) and validation data set (30%), then use the validation data set for a **10-fold cross-validation**.
+
+Then, we will use the *Random Forest* classifier to predict the action class. 
+The accuracy of the model is to be measured using the *10-fold cross validation*.
+
+```{r step_partition, cache=TRUE}
+set.seed(224)
+inTrain <- createDataPartition(train_data$classe, p=0.70, list=F)
+newtrain_data <- train_data[inTrain, ]
+newtest_data <- train_data[-inTrain, ]
+```
+
+The final structure set as per below.
+```{r step_colstraindata2}
+names(newtrain_data)
+names(newtest_data)
+```
+
+```{r step_modelrf, cache=TRUE}
+control_rf <- trainControl(method="cv", 10)
+model_rf <- train(classe ~ . , data=newtrain_data
+                  , method = "rf" 
+                  , trControl = control_rf
+                  , ntree = 250)
+model_rf
+```
+
+The confusion matrix for predictions on cross validation folds is given below.
+
+```{r step_predict, cache=TRUE}
+predict_rf <- predict(model_rf, newtest_data)
+conf_matrix <- confusionMatrix(newtest_data$classe, predict_rf)
+
+mod_accuracy <- postResample(predict_rf, newtest_data$classe)
+mod_accuracy
+
+out_sample_error <- 1 - as.numeric(conf_matrix$overall[1])
+out_sample_error
+#So, the estimated accuracy of the model is `r mod_accuracy` an the estimated out-of-sample error is `r out_sample_error`.
+
+```
+
+The proposed model seems classifying well enough. 
+
+
+## Decision Tree Visualization
+```{r step_treemodel, cache=TRUE}
+tree_model <- rpart(classe ~ ., data=newtrain_data, method="class")
+prp(tree_model)
+
+```
